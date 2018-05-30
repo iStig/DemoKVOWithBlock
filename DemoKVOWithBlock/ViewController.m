@@ -17,7 +17,9 @@
 @end
 
 @implementation Message
-
+- (NSString *)descriptionLog {
+    return @"descriptionLog";
+}
 @end
 
 @interface ViewController ()
@@ -41,7 +43,7 @@
                                self.textfield.text = newValue;
                            });
                        }];
-    
+
   //用来测试不替换class方法的情况
     PrintDescription(@"messageNoObserver",self.messageNoObserver);
     PrintDescription(@"message",self.message);
@@ -63,6 +65,11 @@
     NSUInteger index = arc4random_uniform((u_int32_t)msgs.count);
     self.message.text = msgs[index];
     NSLog(@"%@",self.message.text);
+}
+
+
+- (void)dealloc {
+    [self.message IS_removeObserver:self forKey:NSStringFromSelector(@selector(text))];
 }
 
 - (void)didReceiveMemoryWarning {

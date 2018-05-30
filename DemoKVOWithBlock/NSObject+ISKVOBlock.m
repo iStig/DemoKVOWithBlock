@@ -10,8 +10,8 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 
-NSString *const kISKVOClassPrefix = @"ISKVOClassPrefix_";
-NSString *const kISKVOAssociatedObservers = @"ISKVOAssociatedObservers";
+static NSString *const kISKVOClassPrefix = @"ISKVOClassPrefix_";
+static void *const  kISKVOAssociatedObservers =  (void *)&kISKVOAssociatedObservers;
 
 #pragma mark - ISObservationInfo
 @interface ISObservationInfo:NSObject
@@ -107,9 +107,15 @@ static NSString * setterForGetter(NSString *getter)
     return setter;
 }
 
+/**
+ 1. 获取旧值。
+ 2. 创建super的结构体，并向super发送属性的消息。
+ 3. 遍历调用block。
+ */
 #pragma mark - Overridden Methods
 static void kvo_setter(id self, SEL _cmd, id newValue)
 {
+    //1.
     NSString *setterName = NSStringFromSelector(_cmd);
     NSString *getterName = getterForSetter(setterName);
     
@@ -123,6 +129,7 @@ static void kvo_setter(id self, SEL _cmd, id newValue)
     
     id oldValue = [self valueForKey:getterName];
     
+    //2.
     struct objc_super superclazz = {
         .receiver = self,
         .super_class = class_getSuperclass(object_getClass(self))
@@ -134,8 +141,9 @@ static void kvo_setter(id self, SEL _cmd, id newValue)
     // call super's setter, which is original class's setter method
     objc_msgSendSuperCasted(&superclazz, _cmd, newValue);
     
+    //3.
     // look up observers and call the blocks
-    NSMutableArray *observers = objc_getAssociatedObject(self, (__bridge const void *)(kISKVOAssociatedObservers));
+    NSMutableArray *observers = objc_getAssociatedObject(self,kISKVOAssociatedObservers);
     for (ISObservationInfo *each in observers) {
         if ([each.key isEqualToString:getterName]) {
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -152,11 +160,17 @@ static Class kvo_class(id self, SEL _cmd)
 
 #pragma mark - KVO Category
 @implementation NSObject (ISKVOBlock)
-
+/**
+ 1. 通过Method判断是否有这个key对应的selector，如果没有则Crash。
+ 2. 判断当前类是否是KVO子类，如果不是则创建，并设置其isa指针。
+ 3. 如果没有实现，则添加Key对应的setter方法。
+ 4. 将调用对象添加到数组中。
+ */
 - (void)IS_addObserver:(NSObject *)observer
                 forKey:(NSString *)key
              withBlock:(ISObservingBlock)block
 {
+    //1.
     SEL setterSelector = NSSelectorFromString(setterForGetter(key));
     Method setterMethod = class_getInstanceMethod(object_getClass(self), setterSelector);
     if (!setterMethod) {
@@ -167,6 +181,7 @@ static Class kvo_class(id self, SEL _cmd)
         return;
     }
     
+     //2.
     Class clazz = object_getClass(self);
     NSString *clazzName = NSStringFromClass(clazz);
     
@@ -176,25 +191,27 @@ static Class kvo_class(id self, SEL _cmd)
         object_setClass(self, clazz);
     }
     
+    //3.
     // add our kvo setter if this class (not superclasses) doesn't implement the setter?
     if (![self hasSelector:setterSelector]) {
         const char *types = method_getTypeEncoding(setterMethod);
         class_addMethod(clazz, setterSelector, (IMP)kvo_setter, types);
     }
     
+    // 4.
     ISObservationInfo *info = [[ISObservationInfo alloc] initWithObserver:observer key:key block:block];
-    NSMutableArray *observers = objc_getAssociatedObject(self, (__bridge const void *)(kISKVOAssociatedObservers));
+    NSMutableArray *observers = objc_getAssociatedObject(self, kISKVOAssociatedObservers);
     if (!observers) {
         observers = [NSMutableArray array];
-        objc_setAssociatedObject(self, (__bridge const void *)(kISKVOAssociatedObservers), observers, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     [observers addObject:info];
+    objc_setAssociatedObject(self,kISKVOAssociatedObservers, observers, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
 
 - (void)IS_removeObserver:(NSObject *)observer forKey:(NSString *)key
 {
-    NSMutableArray* observers = objc_getAssociatedObject(self, (__bridge const void *)(kISKVOAssociatedObservers));
+    NSMutableArray* observers = objc_getAssociatedObject(self, kISKVOAssociatedObservers);
     
     ISObservationInfo *infoToRemove;
     for (ISObservationInfo* info in observers) {
@@ -208,8 +225,14 @@ static Class kvo_class(id self, SEL _cmd)
 }
 
 
+/**
+ 1. 判断是否存在KVO类，如果存在则返回。
+ 2. 如果不存在，则创建KVO类。
+ 3. 重写KVO类的class方法，指向自定义的IMP。
+ */
 - (Class)makeKvoClassWithOriginalClassName:(NSString *)originalClazzName
 {
+    // 1.
     NSString *kvoClazzName = [kISKVOClassPrefix stringByAppendingString:originalClazzName];
     Class clazz = NSClassFromString(kvoClazzName);
     
@@ -217,10 +240,12 @@ static Class kvo_class(id self, SEL _cmd)
         return clazz;
     }
     
+    //2.
     // class doesn't exist yet, make it
     Class originalClazz = object_getClass(self);
     Class kvoClazz = objc_allocateClassPair(originalClazz, kvoClazzName.UTF8String, 0);
     
+    //3.
     // grab class method's signature so we can borrow it
     Method clazzMethod = class_getInstanceMethod(originalClazz, @selector(class));
     const char *types = method_getTypeEncoding(clazzMethod);
