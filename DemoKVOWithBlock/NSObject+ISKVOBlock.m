@@ -111,7 +111,7 @@ static NSString * setterForGetter(NSString *getter)
 
 /**
  1. 获取旧值。
- 2. 创建super的结构体，并向super发送属性的消息。这一步不是必须的。系统kvo api没有这一步的实现。
+ 2. 创建super的结构体，并向super发送属性的消息。这一步不是必须的。系统kvo api没有这一步的实现。一般都是手动调用[super _cmd]
  3. 遍历调用block。
  */
 #pragma mark - Overridden Methods
