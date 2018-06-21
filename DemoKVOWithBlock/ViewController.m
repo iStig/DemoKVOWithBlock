@@ -13,13 +13,21 @@
 @interface Message : NSObject
 
 @property (nonatomic, copy) NSString *text;
-
+@property (nonatomic, strong) NSString *des;
 @end
 
 @implementation Message
 - (NSString *)descriptionLog {
     return @"descriptionLog";
 }
+
+//- (void)setText:(NSString *)text {
+//    NSLog(@"text change: %@",text);
+//}
+
+//- (NSString *)text {
+//    return @"AAA";
+//}
 
 @end
 
@@ -32,6 +40,7 @@
 
 @implementation ViewController
 
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
@@ -39,7 +48,7 @@
     self.message = [[Message alloc] init];
     [self.message IS_addObserver:self forKey:NSStringFromSelector(@selector(text))
                        withBlock:^(id observedObject, NSString *observedKey, id oldValue, id newValue) {
-                           NSLog(@"\n %@.%@ is now: %@", observedObject, observedKey, newValue);
+                           NSLog(@"\n %@.%@ is now: %@ \n is old: %@", observedObject, observedKey, newValue,oldValue);
                            dispatch_async(dispatch_get_main_queue(), ^{
                                self.textfield.text = newValue;
                            });
@@ -62,10 +71,10 @@
 
 - (IBAction)changeMessage:(id)sender
 {
-    NSArray *msgs = @[@"Hello World", @"Objective C", @"Swift", @"Python", @"Kotlin", @"Java", @"Go"];
+    NSArray *msgs = @[@"Nodejs", @"Objective C", @"Swift", @"Python", @"Kotlin", @"Java", @"Go"];
     NSUInteger index = arc4random_uniform((u_int32_t)msgs.count);
     self.message.text = msgs[index];
-    NSLog(@"%@",self.message.text);
+    NSLog(@"SELF.MESSAGE.TEXT %@",self.message.text);
 }
 
 
