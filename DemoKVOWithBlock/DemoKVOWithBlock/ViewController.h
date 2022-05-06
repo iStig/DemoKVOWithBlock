@@ -2,8 +2,7 @@
 //  ViewController.h
 //  DemoKVOWithBlock
 //
-//  Created by iStig on 2018/5/29.
-//  Copyright © 2018年 iStig. All rights reserved.
+//  Created by iStig on 2022/5/6.
 //
 
 #import <UIKit/UIKit.h>

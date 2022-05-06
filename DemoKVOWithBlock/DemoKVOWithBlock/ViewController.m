@@ -2,13 +2,13 @@
 //  ViewController.m
 //  DemoKVOWithBlock
 //
-//  Created by iStig on 2018/5/29.
-//  Copyright © 2018年 iStig. All rights reserved.
+//  Created by iStig on 2022/5/6.
 //
 
 #import "ViewController.h"
 #import "NSObject+ISKVOBlock.h"
 #import <objc/runtime.h>
+
 
 @interface Message : NSObject
 
@@ -35,15 +35,13 @@
 @property (nonatomic, weak) IBOutlet UITextField *textfield;
 @property (nonatomic, strong) Message *message;
 @property (nonatomic, strong) Message *messageNoObserver;
-
 @end
 
 @implementation ViewController
 
-
 - (void)viewDidLoad {
     [super viewDidLoad];
-    // Do any additional setup after loading the view, typically from a nib.
+    // Do any additional setup after loading the view.
     self.messageNoObserver = [[Message alloc] init];
     self.message = [[Message alloc] init];
     [self.message IS_addObserver:self forKey:NSStringFromSelector(@selector(text))
@@ -86,6 +84,7 @@
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
 }
+
 
 
 @end
